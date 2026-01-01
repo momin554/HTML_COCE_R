@@ -1,0 +1,898 @@
+import logging
+import asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext, MessageHandler, CallbackQueryHandler
+from telegram.ext import filters
+import datetime
+from collections import defaultdict
+import random
+import time
+
+# Logging setup
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Developer information - Most Beautiful Fonts
+DEVELOPER = {
+    "name": "𝕸𝖗-𝕸𝖔𝖒𝖎𝖓",
+    "username": "𝕸𝖗𝕸𝖔𝖒𝖎𝖓𝟏𝟏𝟐",
+    "channel": "𝕸𝖗-𝕸𝖔𝖒𝖎𝖓 𝕺𝖋𝖋𝖎𝖈𝖎𝖆𝖑"
+}
+
+# Admin configuration
+ADMIN_BOT_TOKEN = "8341312714:AAGeQ3m4rrV9EkwNgUosU0gi-G2211u96H8"
+ADMIN_CHAT_ID = 7245153415
+ADMINS = [ADMIN_CHAT_ID]
+
+# User data storage
+users_data = {}
+blocked_users = set()
+user_activity = defaultdict(list)
+
+# Premium animation symbols - Most Beautiful Set
+ANIMATION_FRAMES = [
+    "✨", "🌟", "💫", "⭐", "🔥", "🎇", "🎆", "🌠", "🌈", "🌌",
+    "🎇", "🎊", "🎉", "🎎", "🎏", "🎐", "🎑", "🎀", "🎁", "🎗️",
+    "🎟️", "🎫", "🎖️", "🏆", "🏅", "🥇", "🥈", "🥉", "⚜️", "🔱",
+    "♨️", "💮", "🌸", "💐", "🏵️", "🌹", "🥀", "🌺", "🌻", "🌼"
+]
+
+GLOWING_FRAMES = ["💛", "🧡", "❤️", "💚", "💙", "💜", "🤍", "🤎"]
+
+def get_animation_frame():
+    return random.choice(ANIMATION_FRAMES)
+
+def get_glowing_frame():
+    return random.choice(GLOWING_FRAMES)
+
+# Auto-delete function
+async def auto_delete_message(bot, chat_id: int, message_id: int, delay: int = 900):
+    """Auto-delete message function"""
+    try:
+        await asyncio.sleep(delay)
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+        logger.info(f"✨ Message {message_id} auto-deleted for user {chat_id}")
+    except Exception as e:
+        logger.error(f"❌ Auto-delete failed for message {message_id}: {e}")
+
+# Blocked user check
+async def check_blocked_user(user_id: int, update: Update, context: CallbackContext) -> bool:
+    if user_id in blocked_users:
+        block_message = f"""
+▄︻デ══━一 𝔹𝕝𝕠𝕔𝕜𝕖𝕕 一━══デ︻▄
+
+☠️ *𝕐𝕠𝕦𝕣 𝕒𝕔𝕔𝕖𝕤𝕤 𝕙𝕒𝕤 𝕓𝕖𝕖𝕟 𝕥𝕖𝕣𝕞𝕚𝕟𝕒𝕥𝕖𝕕* ☠️
+
+📞 *ℂ𝕠𝕟𝕥𝕒𝕔𝕥 𝕊𝕦𝕡𝕡𝕠𝕣𝕥*
+{DEVELOPER['username']}
+"""
+        if update.message:
+            await update.message.reply_text(block_message, parse_mode='Markdown')
+        else:
+            await update.callback_query.message.reply_text(block_message, parse_mode='Markdown')
+        return True
+    return False
+
+# User activity tracking
+def track_user_activity(user_id: int, action: str):
+    """Track user activity"""
+    user_activity[user_id].append({
+        'action': action,
+        'timestamp': datetime.datetime.now()
+    })
+    if len(user_activity[user_id]) > 50:
+        user_activity[user_id] = user_activity[user_id][-50:]
+
+# Premium Start Command - Most Beautiful Design
+async def start(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = user.id
+    
+    # Save user data
+    if user_id not in users_data:
+        users_data[user_id] = {
+            'first_name': user.first_name,
+            'username': user.username,
+            'join_date': update.message.date if update.message else update.callback_query.message.date,
+            'last_activity': datetime.datetime.now()
+        }
+    else:
+        users_data[user_id]['last_activity'] = datetime.datetime.now()
+    
+    # Track activity
+    track_user_activity(user_id, '🚀 𝕾𝖙𝖆𝖗𝖙')
+    
+    # Check blocked user
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    # Delete previous menu message
+    if 'menu_message_id' in context.user_data:
+        try:
+            await context.bot.delete_message(chat_id=user_id, message_id=context.user_data['menu_message_id'])
+        except Exception as e:
+            logger.error(f"Previous menu message deletion failed: {e}")
+    
+    # Most Beautiful Keyboard Design
+    keyboard = [
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 𝗢𝗣𝗘𝗡 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🌐 𝗕𝗔𝗦𝗜𝗖 𝗪𝗘𝗕 𝗔𝗣𝗣 {get_animation_frame()}", web_app=WebAppInfo(url="https://rebrand.ly/momin554"))],
+        [InlineKeyboardButton(f"💎 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 𝗙𝗘𝗔𝗧𝗨𝗥𝗘𝗦 {get_animation_frame()}", callback_data="premium"),
+         InlineKeyboardButton(f"👑 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗥 {get_animation_frame()}", callback_data="developer")],
+        [InlineKeyboardButton(f"🛠️ 𝗛𝗘𝗟𝗣 {get_animation_frame()}", callback_data="help"),
+         InlineKeyboardButton(f"📞 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 {get_animation_frame()}", callback_data="contact")]
+    ]
+    
+    # Add admin panel for admins
+    if user_id in ADMINS:
+        keyboard.append([InlineKeyboardButton(f"👑 𝗔𝗗𝗠𝗜𝗡 𝗣𝗔𝗡𝗘𝗟 {get_animation_frame()}", callback_data="admin_panel")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    welcome_text = f"""
+╔══════════════════════════╗
+     🎀 𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝗧𝗼 🎀
+      𝕸𝖗-𝕸𝖔𝖒𝖎𝖓 𝕻𝖗𝖊𝖒𝖎𝖚𝖒
+╚══════════════════════════╝
+
+{get_glowing_frame()} *𝗛𝗲𝗹𝗹𝗼 {user.first_name.upper()}!* {get_glowing_frame()}
+
+╔══════════════════════════╗
+       🅑🅞🅣 🅘🅝🅕🅞
+╚══════════════════════════╝
+
+✦ *𝗡𝗮𝗺𝗲:* 𝕸𝖗-𝕸𝖔𝖒𝖎𝖓 𝕾𝖚𝖕𝖗𝖆 𝕭𝖔𝖙
+✦ *𝗩𝗲𝗿𝘀𝗶𝗼𝗻:* 🅥6.0.0 𝕾𝖚𝖕𝖗𝖆
+✦ *𝗗𝗲𝘃:* {DEVELOPER['name']}
+✦ *𝗦𝘁𝗮𝘁𝘂𝘀:* 🟢 𝕬𝖈𝖙𝖎𝖛𝖊
+✦ *𝗧𝘆𝗽𝗲:* 💎 𝕾𝖚𝖕𝖗𝖆 𝕰𝖉𝖎𝖙𝖎𝖔𝖓
+
+╔══════════════════════════╗
+      🅕🅔🅐🅣🅤🅡🅔🅢
+╚══════════════════════════╝
+
+{get_animation_frame()} *𝗠𝗮𝘅 𝗪𝗲𝗯 𝗔𝗽𝗽* - 🎯 𝕌𝕝𝕥𝕚𝕞𝕒𝕥𝕖 𝔼𝕩𝕡𝕖𝕣𝕚𝕖𝕟𝕔𝕖
+{get_animation_frame()} *𝗕𝗮𝘀𝗶𝗰 𝗪𝗲𝗯 𝗔𝗽𝗽* - 🌐 𝕊𝕥𝕒𝕟𝕕𝕒𝕣𝕕 𝔸𝕔𝕔𝕖𝕤𝕤  
+{get_animation_frame()} *𝗣𝗿𝗲𝗺𝗶𝘂𝗺 𝗗𝗲𝘀𝗶𝗴𝗻* - 🎨 𝕃𝕦𝕩𝕦𝕣𝕪 𝕀𝕟𝕥𝕖𝕣𝕗𝕒𝕔𝕖
+{get_animation_frame()} *𝗨𝗹𝘁𝗿𝗮 𝗙𝗮𝘀𝘁* - ⚡ 𝕃𝕚𝕘𝕙𝕥𝕟𝕚𝕟𝕘 𝕊𝕡𝕖𝕖𝕕
+{get_animation_frame()} *𝗦𝗲𝗰𝘂𝗿𝗲* - 🛡️ 𝕄𝕚𝕝𝕚𝕥𝕒𝕣𝕪 𝔾𝕣𝕒𝕕𝕖
+{get_animation_frame()} *𝗥𝗲𝗮𝗹-𝗧𝗶𝗺𝗲* - 🔄 𝕃𝕚𝕧𝕖 𝕌𝕡𝕕𝕒𝕥𝕖𝕤
+
+╔══════════════════════════╗
+      🅢🅟🅔🅒🅘🅐🅛
+╚══════════════════════════╝
+
+🎯 *𝔼𝕩𝕡𝕖𝕣𝕚𝕖𝕟𝕔𝕖 𝕥𝕙𝕖 𝕌𝕃𝕋𝕀𝕄𝔸𝕋𝔼 𝕨𝕖𝕓 𝕓𝕣𝕠𝕨𝕤𝕚𝕟𝕘!*
+🚀 *𝕄𝔸𝕏 𝕎𝔼𝔹 𝔸ℙℙ 𝕠𝕗𝕗𝕖𝕣𝕤 𝕡𝕣𝕖𝕞𝕚𝕦𝕞 𝕗𝕖𝕒𝕥𝕦𝕣𝕖𝕤!*
+
+⏰ *🅐🅤🅣🅞-🅓🅔🅛🅔🅣🅔 𝕚𝕟 𝟙𝟝 𝕞𝕚𝕟𝕦𝕥𝕖𝕤*
+"""
+    
+    if update.message:
+        message = await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+    else:
+        message = await update.callback_query.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    # Store menu message ID
+    context.user_data['menu_message_id'] = message.message_id
+    
+    # Auto-delete system
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+# User Management - Fixed with working block system
+async def user_management(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if user_id not in ADMINS:
+        await query.answer("🚫 𝕬𝖈𝖈𝖊𝖘𝖘 𝕯𝖊𝖓𝖎𝖊𝖉!", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    if not users_data:
+        no_users_text = """
+╔══════════════════════════╗
+        👥 𝗨𝗦𝗘𝗥 𝗟𝗜𝗦𝗧
+╚══════════════════════════╝
+
+📭 *𝗡𝗼 𝘂𝘀𝗲𝗿𝘀 𝗳𝗼𝘂𝗻𝗱!*
+        """
+        await query.edit_message_text(no_users_text, parse_mode='Markdown')
+        return
+    
+    # Pagination
+    page = context.user_data.get('user_page', 0)
+    users_per_page = 6
+    user_items = list(users_data.items())
+    total_pages = (len(user_items) + users_per_page - 1) // users_per_page
+    
+    start_idx = page * users_per_page
+    end_idx = min(start_idx + users_per_page, len(user_items))
+    
+    users_list = f"""
+╔══════════════════════════╗
+     👥 𝗨𝗦𝗘𝗥 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧
+╚══════════════════════════╝
+
+📄 *𝗣𝗮𝗴𝗲 {page + 1}/{total_pages} | 𝗧𝗼𝘁𝗮𝗹: {len(users_data)} 𝘂𝘀𝗲𝗿𝘀*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    
+    for idx, (uid, data) in enumerate(user_items[start_idx:end_idx], start_idx + 1):
+        status = "🚫" if uid in blocked_users else "✅"
+        username = f"@{data['username']}" if data.get('username') else "No Username"
+        last_active = data.get('last_activity', 'N/A')
+        if last_active != 'N/A':
+            last_active = last_active.strftime('%d/%m %H:%M')
+        
+        users_list += f"{idx}. {status} **{data['first_name']}**\n"
+        users_list += f"   👤 {username} | 🆔 `{uid}`\n"
+        users_list += f"   🔥 {last_active}\n\n"
+    
+    # Advanced keyboard with block/unblock buttons
+    keyboard = []
+    
+    for uid, data in user_items[start_idx:end_idx]:
+        user_btn_text = f"{data['first_name']}"
+        if len(user_btn_text) > 10:
+            user_btn_text = user_btn_text[:10] + ".."
+        
+        if uid in blocked_users:
+            keyboard.append([
+                InlineKeyboardButton(f"✅ {user_btn_text}", callback_data=f"user_detail_{uid}"),
+                InlineKeyboardButton("🔓 𝗨𝗡𝗕𝗟𝗢𝗖𝗞", callback_data=f"unblock_{uid}")
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton(f"👤 {user_btn_text}", callback_data=f"user_detail_{uid}"),
+                InlineKeyboardButton("🚫 𝗕𝗟𝗢𝗖𝗞", callback_data=f"block_{uid}")
+            ])
+    
+    # Pagination buttons
+    pagination_buttons = []
+    if page > 0:
+        pagination_buttons.append(InlineKeyboardButton("◀️ 𝗣𝗥𝗘𝗩", callback_data=f"user_page_{page-1}"))
+    
+    pagination_buttons.append(InlineKeyboardButton(f"📄 {page+1}/{total_pages}", callback_data="current_page"))
+    
+    if page < total_pages - 1:
+        pagination_buttons.append(InlineKeyboardButton("𝗡𝗘𝗫𝗧 ▶️", callback_data=f"user_page_{page+1}"))
+    
+    if pagination_buttons:
+        keyboard.append(pagination_buttons)
+    
+    # Action buttons
+    keyboard.extend([
+        [InlineKeyboardButton("📊 𝗤𝗨𝗜𝗖𝗞 𝗦𝗧𝗔𝗧𝗦", callback_data="quick_stats")],
+        [InlineKeyboardButton("🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton("👑 𝗔𝗗𝗠𝗜𝗡 𝗣𝗔𝗡𝗘𝗟", callback_data="admin_panel")]
+    ])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(users_list, reply_markup=reply_markup, parse_mode='Markdown')
+
+# Block User - FIXED WORKING VERSION
+async def block_user(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    admin_id = query.from_user.id
+    
+    if admin_id not in ADMINS:
+        await query.answer("🚫 𝕬𝖈𝖈𝖊𝖘𝖘 𝕯𝖊𝖓𝖎𝖊𝖉!", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    try:
+        target_user_id = int(query.data.split('_')[1])
+        
+        if target_user_id in ADMINS:
+            await query.answer("❌ 𝖄𝖔𝖚 𝖈𝖆𝖓𝖓𝖔𝖙 𝖇𝖑𝖔𝖈𝖐 𝖆𝖉𝖒𝖎𝖓𝖘!", show_alert=True)
+            return
+        
+        # Block user
+        blocked_users.add(target_user_id)
+        
+        # Notify user
+        try:
+            block_notification = f"""
+▄︻デ══━一 𝔹𝕝𝕠𝕔𝕜𝕖𝕕 一━══デ︻▄
+
+☠️ *𝕐𝕠𝕦𝕣 𝕒𝕔𝕔𝕖𝕤𝕤 𝕙𝕒𝕤 𝕓𝕖𝕖𝕟 𝕥𝕖𝕣𝕞𝕚𝕟𝕒𝕥𝕖𝕕* ☠️
+
+📞 *ℂ𝕠𝕟𝕥𝕒𝕔𝕥 𝕊𝕦𝕡𝕡𝕠𝕣𝕥*
+{DEVELOPER['username']}
+            """
+            
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=block_notification,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"User block notification failed: {e}")
+        
+        # Track activity
+        track_user_activity(admin_id, f'blocked_user_{target_user_id}')
+        
+        # Success message
+        target_user_data = users_data.get(target_user_id, {'first_name': 'Unknown User'})
+        
+        success_text = f"""
+╔══════════════════════════╗
+      ✅ 𝗨𝗦𝗘𝗥 𝗕𝗟𝗢𝗖𝗞𝗘𝗗
+╚══════════════════════════╝
+
+👤 *𝗨𝘀𝗲𝗿 𝗜𝗻𝗳𝗼:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✦ *𝗜𝗗:* `{target_user_id}`
+✦ *𝗡𝗮𝗺𝗲:* {target_user_data['first_name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* @{target_user_data.get('username', 'N/A')}
+
+📊 *𝗦𝘆𝘀𝘁𝗲𝗺 𝗨𝗽𝗱𝗮𝘁𝗲:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✦ *𝗕𝗹𝗼𝗰𝗸𝗲𝗱 𝗨𝘀𝗲𝗿𝘀:* {len(blocked_users)}
+✦ *𝗔𝗰𝘁𝗶𝘃𝗲 𝗨𝘀𝗲𝗿𝘀:* {len(users_data) - len(blocked_users)}
+✦ *𝗕𝗹𝗼𝗰𝗸 𝗥𝗮𝘁𝗲:* {(len(blocked_users)/len(users_data)*100):.1f}%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ 𝗨𝗡𝗕𝗟𝗢𝗖𝗞 𝗨𝗦𝗘𝗥", callback_data=f"unblock_{target_user_id}")],
+            [InlineKeyboardButton("📩 𝗦𝗘𝗡𝗗 𝗠𝗘𝗦𝗦𝗔𝗚𝗘", callback_data=f"message_{target_user_id}")],
+            [InlineKeyboardButton("🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣", web_app=WebAppInfo(url="https://momin554.github.io/Browser-crash-/"))],
+            [InlineKeyboardButton("👥 𝗨𝗦𝗘𝗥 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧", callback_data="user_management")],
+            [InlineKeyboardButton("👑 𝗔𝗗𝗠𝗜𝗡 𝗣𝗔𝗡𝗘𝗟", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(success_text, reply_markup=reply_markup, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Block user error: {e}")
+        await query.answer("❌ 𝖀𝖓𝖆𝖇𝖑𝖊 𝖙𝖔 𝖇𝖑𝖔𝖈𝖐 𝖚𝖘𝖊𝖗!", show_alert=True)
+
+# Unblock User - FIXED WORKING VERSION
+async def unblock_user(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    admin_id = query.from_user.id
+    
+    if admin_id not in ADMINS:
+        await query.answer("🚫 𝕬𝖈𝖈𝖊𝖘𝖘 𝕯𝖊𝖓𝖎𝖊𝖉!", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    try:
+        target_user_id = int(query.data.split('_')[1])
+        
+        # Unblock user
+        blocked_users.discard(target_user_id)
+        
+        # Notify user
+        try:
+            unblock_notification = """
+╔══════════════════════════╗
+         ✅ 𝗨𝗡𝗕𝗟𝗢𝗖𝗞𝗘𝗗
+╚══════════════════════════╝
+
+🎉 *𝖄𝖔𝖚 𝖍𝖆𝖛𝖊 𝖇𝖊𝖊𝖓 𝖚𝖓𝖇𝖑𝖔𝖈𝖐𝖊𝖉!*
+
+✨ *𝕭𝖔𝖙 𝕬𝖈𝖈𝖊𝖘𝖘 𝕽𝖊𝖘𝖙𝖔𝖗𝖊𝖉*
+𝖄𝖔𝖚𝖗 𝖆𝖈𝖈𝖔𝖚𝖓𝖙 𝖍𝖆𝖘 𝖇𝖊𝖊𝖓 𝖚𝖓𝖇𝖑𝖔𝖈𝖐𝖊𝖉 𝖇𝖞 𝖆𝖉𝖒𝖎𝖓. 
+𝖄𝖔𝖚 𝖈𝖆𝖓 𝖓𝖔𝖜 𝖚𝖘𝖊 𝖆𝖑𝖑 𝖇𝖔𝖙 𝖋𝖊𝖆𝖙𝖚𝖗𝖊𝖘.
+
+🚀 *𝖀𝖘𝖊 𝖇𝖔𝖙:* /start
+            """
+            
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=unblock_notification,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"User unblock notification failed: {e}")
+        
+        # Track activity
+        track_user_activity(admin_id, f'unblocked_user_{target_user_id}')
+        
+        # Success message
+        target_user_data = users_data.get(target_user_id, {'first_name': 'Unknown User'})
+        
+        success_text = f"""
+╔══════════════════════════╗
+     ✅ 𝗨𝗦𝗘𝗥 𝗨𝗡𝗕𝗟𝗢𝗖𝗞𝗘𝗗
+╚══════════════════════════╝
+
+👤 *𝗨𝘀𝗲𝗿 𝗜𝗻𝗳𝗼:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✦ *𝗜𝗗:* `{target_user_id}`
+✦ *𝗡𝗮𝗺𝗲:* {target_user_data['first_name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* @{target_user_data.get('username', 'N/A')}
+
+📊 *𝗦𝘆𝘀𝘁𝗲𝗺 𝗨𝗽𝗱𝗮𝘁𝗲:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✦ *𝗕𝗹𝗼𝗰𝗸𝗲𝗱 𝗨𝘀𝗲𝗿𝘀:* {len(blocked_users)}
+✦ *𝗔𝗰𝘁𝗶𝘃𝗲 𝗨𝘀𝗲𝗿𝘀:* {len(users_data) - len(blocked_users)}
+✦ *𝗨𝗻𝗯𝗹𝗼𝗰𝗸 𝗦𝘂𝗰𝗰𝗲𝘀𝘀:* 100%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        
+        keyboard = [
+            [InlineKeyboardButton("🚫 𝗕𝗟𝗢𝗖𝗞 𝗔𝗚𝗔𝗜𝗡", callback_data=f"block_{target_user_id}")],
+            [InlineKeyboardButton("📩 𝗦𝗘𝗡𝗗 𝗠𝗘𝗦𝗦𝗔𝗚𝗘", callback_data=f"message_{target_user_id}")],
+            [InlineKeyboardButton("🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+            [InlineKeyboardButton("👥 𝗨𝗦𝗘𝗥 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧", callback_data="user_management")],
+            [InlineKeyboardButton("👑 𝗔𝗗𝗠𝗜𝗡 𝗣𝗔𝗡𝗘𝗟", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(success_text, reply_markup=reply_markup, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Unblock user error: {e}")
+        await query.answer("❌ 𝖀𝖓𝖆𝖇𝖑𝖊 𝖙𝖔 𝖚𝖓𝖇𝖑𝖔𝖈𝖐 𝖚𝖘𝖊𝖗!", show_alert=True)
+
+# Advanced Admin Panel - Fixed with working block system
+async def admin_panel(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Only admins allowed
+    if user_id not in ADMINS:
+        await query.answer("🚫 𝕬𝖈𝖈𝖊𝖘𝖘 𝕯𝖊𝖓𝖎𝖊𝖉!", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    # Track activity
+    track_user_activity(user_id, '👑 𝕬𝖉𝖒𝖎𝖓')
+    
+    # Real-time statistics
+    active_users = len(users_data) - len(blocked_users)
+    success_rate = (active_users / len(users_data) * 100) if users_data else 0
+    
+    # Today's active users
+    today = datetime.datetime.now().date()
+    today_active = sum(1 for user_id, data in users_data.items() 
+                      if data.get('last_activity') and data['last_activity'].date() == today)
+    
+    admin_text = f"""
+╔══════════════════════════╗
+     👑 𝗔𝗗𝗠𝗜𝗡
+╚══════════════════════════╝
+
+{get_glowing_frame()} *𝗣𝗥𝗘𝗠𝗜𝗨𝗠 𝗗𝗔𝗦𝗛𝗕𝗢𝗔𝗥𝗗* {get_glowing_frame()}
+
+╔══════════════════════════╗
+     🅢🅣🅐🅣🅢
+╚══════════════════════════╝
+
+✦ *𝗧𝗼𝘁𝗮𝗹 𝗨𝘀𝗲𝗿𝘀:* {len(users_data)}
+✦ *𝗔𝗰𝘁𝗶𝘃𝗲 𝗨𝘀𝗲𝗿𝘀:* {active_users}
+✦ *𝗕𝗹𝗼𝗰𝗸𝗲𝗱 𝗨𝘀𝗲𝗿𝘀:* {len(blocked_users)}
+✦ *𝗦𝘂𝗰𝗰𝗲𝘀𝘀 𝗥𝗮𝘁𝗲:* {success_rate:.1f}%
+✦ *𝗧𝗼𝗱𝗮𝘆 𝗔𝗰𝘁𝗶𝘃𝗲:* {today_active}
+✦ *𝗦𝘆𝘀𝘁𝗲𝗺:* 🟢 𝕽𝖚𝖓𝖓𝖎𝖓𝖌
+✦ *𝗬𝗼𝘂𝗿 𝗜𝗗:* `{user_id}`
+
+╔══════════════════════════╗
+     🅣🅞🅞🅛🅢
+╚══════════════════════════╝
+"""
+    
+    keyboard = [
+        [InlineKeyboardButton(f"👥 𝗨𝗦𝗘𝗥 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧 {get_animation_frame()}", callback_data="user_management")],
+        [InlineKeyboardButton(f"📊 𝗔𝗡𝗔𝗟𝗬𝗧𝗜𝗖𝗦 {get_animation_frame()}", callback_data="detailed_analytics")],
+        [InlineKeyboardButton(f"🚫 𝗕𝗟𝗢𝗖𝗞 𝗦𝗬𝗦𝗧𝗘𝗠 {get_animation_frame()}", callback_data="block_management")],
+        [InlineKeyboardButton(f"📢 𝗕𝗥𝗢𝗔𝗗𝗖𝗔𝗦𝗧 {get_animation_frame()}", callback_data="broadcast_message")],
+        [InlineKeyboardButton(f"🔍 𝗔𝗖𝗧𝗜𝗩𝗜𝗧𝗬 𝗟𝗢𝗚 {get_animation_frame()}", callback_data="activity_log")],
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🔙 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(admin_text, reply_markup=reply_markup, parse_mode='Markdown')
+
+# Back to Menu - Most Beautiful Design
+async def back_to_menu(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    user = query.from_user
+    user_id = user.id
+    
+    # Check blocked user
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    # Delete previous menu message
+    if 'menu_message_id' in context.user_data:
+        try:
+            await context.bot.delete_message(chat_id=user_id, message_id=context.user_data['menu_message_id'])
+        except Exception as e:
+            logger.error(f"Previous menu message deletion failed: {e}")
+    
+    # Most Beautiful Keyboard Design
+    keyboard = [
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 𝗢𝗣𝗘𝗡 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🌐 𝗕𝗔𝗦𝗜𝗖 𝗪𝗘𝗕 𝗔𝗣𝗣 {get_animation_frame()}", web_app=WebAppInfo(url="https://rebrand.ly/momin554"))],
+        [InlineKeyboardButton(f"💎 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 𝗙𝗘𝗔𝗧𝗨𝗥𝗘𝗦 {get_animation_frame()}", callback_data="premium"),
+         InlineKeyboardButton(f"👑 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗥 {get_animation_frame()}", callback_data="developer")],
+        [InlineKeyboardButton(f"🛠️ 𝗛𝗘𝗟𝗣 {get_animation_frame()}", callback_data="help"),
+         InlineKeyboardButton(f"📞 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 {get_animation_frame()}", callback_data="contact")]
+    ]
+    
+    # Add admin panel for admins
+    if user_id in ADMINS:
+        keyboard.append([InlineKeyboardButton(f"👑 𝗔𝗗𝗠𝗜𝗡 𝗣𝗔𝗡𝗘𝗟 {get_animation_frame()}", callback_data="admin_panel")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    welcome_text = f"""
+╔══════════════════════════╗
+     🎀 𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝗧𝗼 🎀
+      𝕸𝖗-𝕸𝖔𝖒𝖎𝖓 𝕻𝖗𝖊𝖒𝖎𝖚𝖒
+╚══════════════════════════╝
+
+{get_glowing_frame()} *𝗛𝗲𝗹𝗹𝗼 {user.first_name.upper()}!* {get_glowing_frame()}
+
+🎯 *𝕰𝖝𝖈𝖑𝖚𝖘𝖎𝖛𝖊 𝕺𝖋𝖋𝖊𝖗:*
+𝔼𝕩𝕡𝕖𝕣𝕚𝕖𝕟𝕔𝕖 *𝕄𝔸𝕏 𝕎𝔼𝔹 𝔸ℙℙ* 𝕗𝕠𝕣 𝕦𝕝𝕥𝕚𝕞𝕒𝕥𝕖 𝕓𝕣𝕠𝕨𝕤𝕚𝕟𝕘!
+
+📱 *𝕮𝖑𝖎𝖈𝖐 𝖇𝖚𝖙𝖙𝖔𝖓𝖘 𝖇𝖊𝖑𝖔𝖜 𝖙𝖔 𝖆𝖈𝖈𝖊𝖘𝖘 𝖜𝖊𝖇 𝖆𝖕𝖕𝖘!*
+
+⏰ *🅐🅤🅣🅞-🅓🅔🅛🅔🅣🅔 𝕚𝕟 𝟙𝟝 𝕞𝕚𝕟𝕦𝕥𝕖𝕤*
+"""
+    
+    message = await query.edit_message_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    # Store menu message ID
+    context.user_data['menu_message_id'] = message.message_id
+    
+    # Auto-delete system
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+# Callback Handler - UPDATED with working block system
+async def button_handler(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    
+    # Check blocked user (except admins)
+    if user_id in blocked_users and user_id not in ADMINS:
+        await query.edit_message_text("🚫 𝕐𝕠𝕦 𝕒𝕣𝕖 𝕓𝕝𝕠𝕔𝕜𝕖𝕕. ℂ𝕠𝕟𝕥𝕒𝕔𝕥 𝕒𝕕𝕞𝕚𝕟.")
+        return
+    
+    # Pagination handling
+    if query.data.startswith("user_page_"):
+        page_num = int(query.data.split('_')[2])
+        context.user_data['user_page'] = page_num
+        await user_management(update, context)
+        return
+    
+    # User detail view
+    if query.data.startswith("user_detail_"):
+        await user_detail_view(update, context)
+        return
+    
+    # Block/Unblock handling
+    if query.data.startswith("block_"):
+        await block_user(update, context)
+        return
+    
+    if query.data.startswith("unblock_"):
+        await unblock_user(update, context)
+        return
+    
+    if query.data == "help":
+        await help_command(update, context)
+    elif query.data == "premium":
+        await premium_features(update, context)
+    elif query.data == "developer":
+        await developer_info(update, context)
+    elif query.data == "contact":
+        await contact_info(update, context)
+    elif query.data == "admin_panel":
+        await admin_panel(update, context)
+    elif query.data == "user_management":
+        await user_management(update, context)
+    elif query.data == "detailed_analytics":
+        await detailed_analytics(update, context)
+    elif query.data == "broadcast_message":
+        await broadcast_message(update, context)
+    elif query.data == "back_to_menu":
+        await back_to_menu(update, context)
+    else:
+        # For other callbacks
+        await query.answer("🔮 𝔽𝕖𝕒𝕥𝕦𝕣𝕖 𝕔𝕠𝕞𝕚𝕟𝕘 𝕤𝕠𝕠𝕟...")
+
+# Other functions remain the same (premium_features, help_command, etc.)
+async def premium_features(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    track_user_activity(user_id, '💎 𝕻𝖗𝖊𝖒𝖎𝖚𝖒')
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    premium_text = f"""
+╔══════════════════════════╗
+     💎 𝗣𝗥𝗘𝗠𝗜𝗨𝗠
+╚══════════════════════════╝
+
+{get_glowing_frame()} *𝗘𝗫𝗖𝗟𝗨𝗦𝗜𝗩𝗘 𝗙𝗘𝗔𝗧𝗨𝗥𝗘𝗦* {get_glowing_frame()}
+
+✨ *𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗙𝗲𝗮𝘁𝘂𝗿𝗲𝘀:*
+{get_animation_frame()} *𝗨𝗹𝘁𝗿𝗮 𝗙𝗮𝘀𝘁 𝗦𝗽𝗲𝗲𝗱*
+{get_animation_frame()} *𝗦𝗺𝗮𝗿𝘁 𝗔𝘂𝘁𝗼𝗺𝗮𝘁𝗶𝗼𝗻*  
+{get_animation_frame()} *𝗣𝗿𝗶𝘃𝗮𝘁𝗲 𝗠𝗼𝗱𝗲*
+{get_animation_frame()} *𝗥𝗲𝗮𝗹-𝗧𝗶𝗺𝗲 𝗔𝗻𝗮𝗹𝘆𝘁𝗶𝗰𝘀*
+{get_animation_frame()} *𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆*
+
+👑 *𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿:*
+✦ *𝗡𝗮𝗺𝗲:* {DEVELOPER['name']}
+✦ *𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺:* {DEVELOPER['username']}
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 𝗢𝗣𝗘𝗡 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🔙 𝗕𝗔𝗖𝗞 𝗧𝗢 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = await update.callback_query.message.reply_text(premium_text, reply_markup=reply_markup, parse_mode='Markdown')
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+async def help_command(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    track_user_activity(user_id, '🛠️ 𝕳𝖊𝖑𝖕')
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    help_text = f"""
+╔══════════════════════════╗
+     🛠️ 𝗛𝗘𝗟𝗣
+╚══════════════════════════╝
+
+*𝗨𝘀𝗲𝗿 𝗚𝘂𝗶𝗱𝗲:*
+
+1️⃣ Click *MAX WEB APP* for premium
+2️⃣ Click *BASIC WEB APP* for standard  
+3️⃣ Browse within bot interface
+
+👑 *𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿:*
+{DEVELOPER['username']}
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 𝗢𝗣𝗘𝗡 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🔙 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.message:
+        message = await update.message.reply_text(help_text, reply_markup=reply_markup, parse_mode='Markdown')
+    else:
+        message = await update.callback_query.message.reply_text(help_text, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+async def developer_info(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    track_user_activity(user_id, '👑 𝕯𝖊𝖛𝖊𝖑𝖔𝖕𝖊𝖗')
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    developer_text = f"""
+╔══════════════════════════╗
+     👑 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗥
+╚══════════════════════════╝
+
+*𝗣𝗿𝗼𝗳𝗲𝘀𝘀𝗶𝗼𝗻𝗮𝗹 𝗣𝗿𝗼𝗳𝗶𝗹𝗲:*
+
+✦ *𝗡𝗮𝗺𝗲:* {DEVELOPER['name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* {DEVELOPER['username']}
+✦ *𝗘𝘅𝗽𝗲𝗿𝗶𝗲𝗻𝗰𝗲:* 3+ Years
+✦ *𝗣𝗿𝗼𝗷𝗲𝗰𝘁𝘀:* 50+ Completed
+
+📞 *𝗖𝗼𝗻𝘁𝗮𝗰𝘁:*
+{DEVELOPER['username']}
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"📞 𝗗𝗜𝗥𝗘𝗖𝗧 𝗠𝗘𝗦𝗦𝗔𝗚𝗘 {get_animation_frame()}", url=f"https://t.me/{DEVELOPER['username'][1:]}")],
+        [InlineKeyboardButton(f"🔙 𝗕𝗔𝗖𝗞 𝗧𝗢 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = await update.callback_query.message.reply_text(developer_text, reply_markup=reply_markup, parse_mode='Markdown')
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+async def contact_info(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    track_user_activity(user_id, '📞 𝕮𝖔𝖓𝖙𝖆𝖈𝖙')
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    contact_text = f"""
+╔══════════════════════════╗
+     📞 𝗖𝗢𝗡𝗧𝗔𝗖𝗧
+╚══════════════════════════╝
+
+*𝗣𝗿𝗼𝗳𝗲𝘀𝘀𝗶𝗼𝗻𝗮𝗹 𝗦𝗲𝗿𝘃𝗶𝗰𝗲𝘀:*
+
+👑 *𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿:*
+✦ *𝗡𝗮𝗺𝗲:* {DEVELOPER['name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* {DEVELOPER['username']}
+
+💬 *𝗖𝗼𝗻𝘁𝗮𝗰𝘁:*
+{get_animation_frame()} *𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺:* {DEVELOPER['username']}
+{get_animation_frame()} *𝗘𝗺𝗮𝗶𝗹:* mominmomin017@gmail.com
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"📱 𝗗𝗜𝗥𝗘𝗖𝗧 𝗠𝗘𝗦𝗦𝗔𝗚𝗘 {get_animation_frame()}", url=f"https://t.me/{DEVELOPER['username'][1:]}")],
+        [InlineKeyboardButton(f"🔙 𝗕𝗔𝗖𝗞 𝗧𝗢 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = await update.callback_query.message.reply_text(contact_text, reply_markup=reply_markup, parse_mode='Markdown')
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+# Placeholder functions for other admin features
+async def detailed_analytics(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer("📊 𝔸𝕟𝕒𝕝𝕪𝕥𝕚𝕔𝕤 - ℂ𝕠𝕞𝕚𝕟𝕘 𝕊𝕠𝕠𝕟!")
+    await admin_panel(update, context)
+
+async def block_management(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer("🚫 𝔹𝕝𝕠𝕔𝕜 𝕊𝕪𝕤𝕥𝕖𝕞 - 𝕌𝕤𝕖 𝕌𝕤𝕖𝕣 𝕄𝕒𝕟𝕒𝕘𝕖𝕞𝕖𝕟𝕥!")
+    await admin_panel(update, context)
+
+async def broadcast_message(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer("📢 𝔹𝕣𝕠𝕒𝕕𝕔𝕒𝕤𝕥 - 𝕌𝕤𝕖 /broadcast 𝕔𝕠𝕞𝕞𝕒𝕟𝕕!")
+    await admin_panel(update, context)
+
+async def activity_log(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer("🔍 𝔸𝕔𝕥𝕚𝕧𝕚𝕥𝕪 𝕃𝕠𝕘 - ℂ𝕠𝕞𝕚𝕟𝕘 𝕊𝕠𝕠𝕟!")
+    await admin_panel(update, context)
+
+async def user_detail_view(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer("👤 𝕌𝕤𝕖𝕣 𝔻𝕖𝕥𝕒𝕚𝕝𝕤 - ℂ𝕠𝕞𝕚𝕟𝕘 𝕊𝕠𝕠𝕟!")
+
+async def about_command(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    about_text = f"""
+╔══════════════════════════╗
+     🎊 𝗔𝗕𝗢𝗨𝗧
+╚══════════════════════════╝
+
+*𝗣𝗿𝗲𝗺𝗶𝘂𝗺 𝗕𝗼𝘁 𝗜𝗻𝗳𝗼𝗿𝗺𝗮𝘁𝗶𝗼𝗻:*
+
+👑 *𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿:*
+✦ *𝗡𝗮𝗺𝗲:* {DEVELOPER['name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* {DEVELOPER['username']}
+
+🚀 *𝗙𝗲𝗮𝘁𝘂𝗿𝗲𝘀:*
+{get_animation_frame()} *𝗠𝗮𝘅 𝗪𝗲𝗯 𝗔𝗽𝗽*
+{get_animation_frame()} *𝗕𝗮𝘀𝗶𝗰 𝗪𝗲𝗯 𝗔𝗽𝗽*
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"🚀 𝗠𝗔𝗫_𝗪𝗘𝗕 𝗔𝗣𝗣 𝗢𝗣𝗘𝗡 {get_animation_frame()}", web_app=WebAppInfo(url="https://mrmomin554.github.io/User_panen-/"))],
+        [InlineKeyboardButton(f"🔙 𝗠𝗔𝗜𝗡 𝗠𝗘𝗡𝗨 {get_animation_frame()}", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = await update.message.reply_text(about_text, reply_markup=reply_markup, parse_mode='Markdown')
+    asyncio.create_task(auto_delete_message(context.bot, user_id, message.message_id, 900))
+
+async def handle_text_message(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    message_text = update.message.text
+    
+    track_user_activity(user_id, '💬 𝕿𝖊𝖝𝖙')
+    
+    if await check_blocked_user(user_id, update, context):
+        return
+    
+    # Admin broadcast handling
+    if user_id in ADMINS and message_text.startswith('/broadcast'):
+        try:
+            parts = message_text.split(' ', 1)
+            if len(parts) >= 2:
+                message_content = parts[1]
+                
+                success_count = 0
+                fail_count = 0
+                
+                broadcast_progress = await update.message.reply_text("📢 *𝔹𝕣𝕠𝕒𝕕𝕔𝕒𝕤𝕥 𝕤𝕥𝕒𝕣𝕥𝕚𝕟𝕘...*", parse_mode='Markdown')
+                
+                for uid in users_data:
+                    if uid not in blocked_users:
+                        try:
+                            await context.bot.send_message(
+                                chat_id=uid,
+                                text=f"📢 **𝔹𝕣𝕠𝕒𝕕𝕔𝕒𝕤𝕥 𝕗𝕣𝕠𝕞 𝔸𝕕𝕞𝕚𝕟:**\n\n{message_content}",
+                                parse_mode='Markdown'
+                            )
+                            success_count += 1
+                        except Exception as e:
+                            fail_count += 1
+                
+                await broadcast_progress.edit_text(
+                    f"✅ *𝔹𝕣𝕠𝕒𝕕𝕔𝕒𝕤𝕥 ℂ𝕠𝕞𝕡𝕝𝕖𝕥𝕖!*\n\n"
+                    f"📨 *𝕊𝕦𝕔𝕔𝕖𝕤𝕤:* {success_count} 𝕦𝕤𝕖𝕣𝕤\n"
+                    f"❌ *𝔽𝕒𝕚𝕝𝕖𝕕:* {fail_count} 𝕦𝕤𝕖𝕣𝕤"
+                )
+                
+                track_user_activity(user_id, f'broadcast_sent_{success_count}')
+                
+            else:
+                await update.message.reply_text("❌ 𝕎𝕣𝕠𝕟𝕘 𝕗𝕠𝕣𝕞𝕒𝕥! 𝕌𝕤𝕖: `/broadcast your_message`", parse_mode='Markdown')
+        except Exception as e:
+            await update.message.reply_text(f"❌ 𝔹𝕣𝕠𝕒𝕕𝕔𝕒𝕤𝕥 𝕖𝕣𝕣𝕠𝕣: {str(e)}")
+    else:
+        await start(update, context)
+
+# Main function
+def main():
+    TOKEN = "7951069593:AAEXsfdFb7YoqRo40XaWuuhLnfTcsc6YiAQ"
+    
+    application = ApplicationBuilder().token(TOKEN).build()
+    
+    # Handler registration
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("about", about_command))
+    application.add_handler(CommandHandler("broadcast", handle_text_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    
+    print(f"""
+╔══════════════════════════════════════════════════╗
+              🎉 𝗕𝗢𝗧 𝗦𝗧𝗔𝗥𝗧𝗘𝗗 🎉
+╚══════════════════════════════════════════════════╝
+
+🤖 *𝗣𝗥𝗘𝗠𝗜𝗨𝗠 𝗕𝗢𝗧 𝗜𝗡𝗙𝗢𝗥𝗠𝗔𝗧𝗜𝗢𝗡:*
+✦ *𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿:* {DEVELOPER['name']}
+✦ *𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲:* {DEVELOPER['username']}
+✦ *𝗦𝘁𝗮𝘁𝘂𝘀:* 🟢 𝕽𝖚𝖓𝖓𝖎𝖓𝖌
+✦ *𝗩𝗲𝗿𝘀𝗶𝗼𝗻:* 🅥7.0.0
+✦ *𝗘𝗱𝗶𝘁𝗶𝗼𝗻:* 💎 𝕾𝖚𝖕𝖗𝖆
+
+✨ *𝗘𝗫𝗖𝗟𝗨𝗦𝗜𝗩𝗘 𝗙𝗘𝗔𝗧𝗨𝗥𝗘𝗦:*
+✦ 🚀 *𝗠𝗮𝘅 𝗪𝗲𝗯 𝗔𝗽𝗽* - 𝔸𝕕𝕧𝕒𝕟𝕔𝕖𝕕 𝕀𝕟𝕥𝕖𝕣𝕗𝕒𝕔𝕖
+✦ 🌐 *𝗕𝗮𝘀𝗶𝗰 𝗪𝗲𝗯 𝗔𝗽𝗽* - 𝕊𝕥𝕒𝕟𝕕𝕒𝕣𝕕 𝔸𝕔𝕔𝕖𝕤𝕤  
+✦ ⚡ 𝕳𝖎𝖌𝖍 𝕻𝖊𝖗𝖋𝖔𝖗𝖒𝖆𝖓𝖈𝖊
+✦ 🎨 𝕻𝖗𝖊𝖒𝖎𝖚𝖒 𝕯𝖊𝖘𝖎𝖌𝖓
+✦ 🔒 𝕾𝖊𝖈𝖚𝖗𝖊 𝕮𝖔𝖓𝖓𝖊𝖈𝖙𝖎𝖔𝖓
+✦ 📞 24/7 𝕾𝖚𝖕𝖕𝖔𝖗𝖙
+✦ 👑 𝕬𝖉𝖛𝖆𝖓𝖈𝖊𝖉 𝕬𝖉𝖒𝖎𝖓 𝕻𝖆𝖓𝖊𝖑
+✦ 📊 𝕽𝖊𝖆𝖑-𝖙𝖎𝖒𝖊 𝕬𝖓𝖆𝖑𝖞𝖙𝖎𝖈𝖘
+✦ 👥 𝖀𝖘𝖊𝖗 𝕸𝖆𝖓𝖆𝖌𝖊𝖒𝖊𝖓𝖙
+✦ 📢 𝕭𝖗𝖔𝖆𝖉𝖈𝖆𝖘𝖙 𝕾𝖞𝖘𝖙𝖊𝖒
+✦ 🔍 𝕬𝖈𝖙𝖎𝖛𝖎𝖙𝖞 𝕸𝖔𝖓𝖎𝖙𝖔𝖗𝖎𝖓𝖌
+✦ 🚫 **𝕱𝖎𝖝𝖊𝖉 𝕭𝖑𝖔𝖈𝖐𝖎𝖓𝖌 𝕾𝖞𝖘𝖙𝖊𝖒**
+✦ ⏰ 𝕬𝖚𝖙𝖔-𝕯𝖊𝖑𝖊𝖙𝖊 𝕾𝖞𝖘𝖙𝖊𝖒 (15 𝖒𝖎𝖓𝖚𝖙𝖊𝖘)
+
+🔔 *𝗣𝗥𝗘𝗠𝗜𝗨𝗠 𝗕𝗢𝗧 𝗜𝗦 𝗡𝗢𝗪 𝗟𝗜𝗩𝗘 𝗔𝗡𝗗 𝗥𝗘𝗔𝗗𝗬!*
+✅ **𝕭𝖑𝖔𝖈𝖐𝖎𝖓𝖌 𝖘𝖞𝖘𝖙𝖊𝖒 𝖓𝖔𝖜 𝖜𝖔𝖗𝖐𝖎𝖓𝖌 𝖕𝖗𝖔𝖕𝖊𝖗𝖑𝖞!**
+    """)
+    
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
